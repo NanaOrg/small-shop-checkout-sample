@@ -1,0 +1,80 @@
+version: 1
+workflow:
+  start: prepare
+  on-any-state: { block: blocked, enter: live, issue-text-changed: text-changed }
+  states:
+    prepare:
+      column: in-progress
+      action: { type: prepare }
+      on: { done: implement }
+    implement:
+      column: in-progress
+      action:
+        type: coding
+        prompts: { implement: prompts/implement.md, fix: prompts/fix.md, continue: prompts/continue.md }
+      limit: { entries: 3, then: blocked }
+      on:
+        changed: build
+        no-change: blocked
+        question: live
+        conflict-left: implement
+        failed: blocked
+    build:
+      column: in-progress
+      action: { type: build }
+      on: { passed: review, failed: implement }
+    review:
+      column: in-review
+      action:
+        type: reviews
+        prompts:
+          correctness: prompts/review-correctness.md
+          security: prompts/review-security.md
+          architecture: prompts/review-architecture.md
+          quality: prompts/review-quality.md
+      limit: { entries: 10, then: blocked }
+      on: { approved: risk, rejected: implement }
+    risk:
+      column: in-review
+      action: { type: risk, prompts: { risk: prompts/risk.md } }
+      on: { assessed: merge }
+    merge:
+      column: in-review
+      action: { type: merge-gate, mode: risk }
+      on:
+        merged: done
+        needs-approval: waits-for-approval
+        needs-new-reviews: build
+        conflict: implement
+        factory-changed: factory-change-approval
+    waits-for-approval:
+      column: waits-for-you
+      action: { type: approval }
+      on: { approved: merge }
+    factory-change-approval:
+      column: waits-for-you
+      action: { type: approval }
+      on: { approved: merge }
+    text-changed:
+      column: waits-for-you
+      action: { type: approval }
+      on: { approved: previous }
+    live:
+      column: waits-for-you
+      action: { type: conversation }
+      on: { continue: previous, changed: build }
+    blocked:
+      column: blocked
+      on: { continue: previous }
+    done:
+      column: done
+      action: { type: finish }
+build:
+  command: "./mvnw verify"
+  environment: { LANG: C.UTF-8 }
+claude:
+  allowed-tools: [Read, Edit, Write, Glob, Grep, "Bash(git status*)", "Bash(git diff*)", "Bash(git log*)",
+                  "Bash(git show*)", "Bash(./mvnw *)", "Bash(mvn *)"]
+merge:
+  target-branch: "main"
+repositories: []
