@@ -25,4 +25,11 @@ class PriceCalculatorTest {
 
         assertEquals(new BigDecimal("18.00"), priceCalculator.calculateTotal(cart, new Discount(10)));
     }
+
+    @Test
+    void roundsHalfACentOfTheDiscountUp() {
+        Cart cart = new Cart(List.of(new CartLine("book", new BigDecimal("19.95"), 1)));
+
+        assertEquals(new BigDecimal("17.95"), priceCalculator.calculateTotal(cart, new Discount(10)));
+    }
 }
