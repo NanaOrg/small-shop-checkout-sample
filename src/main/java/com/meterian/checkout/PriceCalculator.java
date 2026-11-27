@@ -9,7 +9,7 @@ public final class PriceCalculator {
 
     public BigDecimal calculateTotal(Cart cart, Discount discount) {
         BigDecimal subtotal = cart.calculateSubtotal();
-        BigDecimal discountAmount = discount.calculateAmount(subtotal).setScale(DECIMALS, RoundingMode.DOWN);
+        BigDecimal discountAmount = discount.calculateAmount(subtotal).setScale(DECIMALS, RoundingMode.HALF_UP);
         return subtotal.subtract(discountAmount).setScale(DECIMALS);
     }
 }
